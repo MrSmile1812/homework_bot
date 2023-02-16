@@ -46,7 +46,8 @@ def check_tokens():
     for token in list_of_tokens:
         if not token:
             logging.critical(
-                f"Necessary variables are missing. Check all variables in list_of_tokens."
+                f"Necessary variables are missing. "
+                f"Check all variables in list_of_tokens."
             )
             flag = False
             break
@@ -66,7 +67,8 @@ def get_api_answer(timestamp):
                 f"name: {responses[homework_statuses.status_code]}"
             )
             raise requests.RequestException(
-                f"Some problems with server. Code: {homework_statuses.status_code}"
+                f"Some problems with server. "
+                f"Code: {homework_statuses.status_code}"
             )
         return homework_statuses.json()
     except requests.RequestException:
