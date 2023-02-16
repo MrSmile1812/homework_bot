@@ -46,8 +46,8 @@ def check_tokens():
     for token in list_of_tokens:
         if not token:
             logging.critical(
-                f"Necessary variables are missing. "
-                f"Check all variables in list_of_tokens."
+                "Necessary variables are missing."
+                "Check all variables in list_of_tokens."
             )
             flag = False
             break
@@ -87,8 +87,8 @@ def check_response(response):
         raise TypeError("Object 'homework' must be dict.")
 
     if not response.get("homeworks"):
-        logging.error(f"Key access error 'homeworks'.")
-        raise KeyError(f"Key access error 'homeworks'.")
+        logging.error("Key access error 'homeworks'.")
+        raise KeyError("Key access error 'homeworks'.")
     else:
         homework = response.get("homeworks")
     if not isinstance(homework, list):
@@ -99,11 +99,11 @@ def check_response(response):
 def parse_status(homework):
     """Getting status of homework."""
     if not homework.get("homework_name"):
-        logging.error(f"Key access error 'homework_name'")
-        raise KeyError(f"Key access error 'homework_name'")
+        logging.error("Key access error 'homework_name'")
+        raise KeyError("Key access error 'homework_name'")
     elif not homework.get("status"):
-        logging.error(f"Key access error 'status'")
-        raise KeyError(f"Key access error 'status'")
+        logging.error("Key access error 'status'")
+        raise KeyError("Key access error 'status'")
     else:
         homework_name = homework.get("homework_name")
         homework_status = homework.get("status")
@@ -122,7 +122,7 @@ def send_message(bot, message):
     try:
         logging.debug(f'Bot Tries to send message: "{message}"')
         bot.send_message(TELEGRAM_CHAT_ID, message)
-        logging.debug(f"The message has been sent")
+        logging.debug("The message has been sent")
     except Exception as error:
         logging.error(f"Sending message error: {error}")
         raise Exception(f"Sending message error: {error}")
