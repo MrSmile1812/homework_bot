@@ -135,7 +135,7 @@ def main() -> str:
                 current_status = homework[FIRST_OBJECT].get("status")
                 message = parse_status(homework[FIRST_OBJECT])
             if current_status != last_status:
-                last_status = message
+                last_status = current_status
                 send_message(bot, message)
             else:
                 logging.debug("No updates.")
