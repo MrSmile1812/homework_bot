@@ -134,10 +134,9 @@ def main() -> str:
             else:
                 current_status = homework[FIRST_OBJECT].get("status")
                 message = parse_status(homework[FIRST_OBJECT])
-                print(message)
             if current_status != last_status:
-                send_message(bot, message)
                 last_status = message
+                send_message(bot, message)
             else:
                 logging.debug("No updates.")
         except Exception as error:
