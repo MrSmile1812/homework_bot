@@ -58,7 +58,7 @@ def get_api_answer(timestamp: int) -> dict:
         )
         if homework_statuses.status_code != HTTPStatus.OK:
             raise requests.RequestException(
-                f"Some problems with server. "
+                "Some problems with server."
                 "Code: %s" % homework_statuses.status_code
             )
         return homework_statuses.json()
