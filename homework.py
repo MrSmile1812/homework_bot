@@ -3,11 +3,12 @@ import os
 import sys
 import time
 from http import HTTPStatus
-from http.client import responses
 
 import requests
 import telegram
 from dotenv import load_dotenv
+
+from OwnExceptions import TelegramError
 
 load_dotenv()
 
@@ -35,100 +36,86 @@ HOMEWORK_VERDICTS = {
 }
 
 
-def check_tokens():
+def check_tokens() -> bool:
     """Checking the availability of all tokens."""
-    list_of_tokens = [
-        PRACTICUM_TOKEN,
-        TELEGRAM_TOKEN,
-        TELEGRAM_CHAT_ID,
-    ]
-    flag = True
-    for token in list_of_tokens:
-        if not token:
-            logging.critical(
-                "Necessary variables are missing."
-                "Check all variables in list_of_tokens."
-            )
-            flag = False
-            break
-    return flag
+    if all((PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID)):
+        return True
+    else:
+        logging.critical(
+            "Necessary variables are missing."
+            "Check all variables in list_of_tokens."
+        )
+        return False
 
 
-def get_api_answer(timestamp):
+def get_api_answer(timestamp: int) -> dict:
     """Request to the API service endpoint."""
     try:
+        logging.info("Starting API request with ENDPOINT, headers and params.")
         PAYLOAD = {"from_date": timestamp}
         homework_statuses = requests.get(
             ENDPOINT, headers=HEADERS, params=PAYLOAD
         )
         if homework_statuses.status_code != HTTPStatus.OK:
-            logging.error(
-                f"Server answer - code: {homework_statuses.status_code}, "
-                f"name: {responses[homework_statuses.status_code]}"
-            )
             raise requests.RequestException(
                 f"Some problems with server. "
-                f"Code: {homework_statuses.status_code}"
+                "Code: %s" % homework_statuses.status_code
             )
         return homework_statuses.json()
     except requests.RequestException:
-        logging.error(
-            f"Server answer - code: {homework_statuses.status_code}, "
-            f"name: {responses[homework_statuses.status_code]}"
-        )
         raise requests.RequestException(
-            f"Some problems with server. Code: {homework_statuses.status_code}"
+            "Some problems with server. Code: %s"
+            % homework_statuses.status_code
         )
 
 
-def check_response(response):
+def check_response(response: dict) -> list:
     """Checking API response for compliance with the documentation."""
     if not isinstance(response, dict):
         raise TypeError("Object 'homework' must be dict.")
-
-    if not response.get("homeworks"):
-        logging.error("Key access error 'homeworks'.")
+    homework = response.get("homeworks")
+    if homework is None:
         raise KeyError("Key access error 'homeworks'.")
-    else:
-        homework = response.get("homeworks")
     if not isinstance(homework, list):
         raise TypeError("Object 'homework' must be list.")
     return homework
 
 
-def parse_status(homework):
+def parse_status(homework: dict) -> str:
     """Getting status of homework."""
-    if not homework.get("homework_name"):
-        logging.error("Key access error 'homework_name'")
-        raise KeyError("Key access error 'homework_name'")
-    elif not homework.get("status"):
-        logging.error("Key access error 'status'")
-        raise KeyError("Key access error 'status'")
-    else:
-        homework_name = homework.get("homework_name")
-        homework_status = homework.get("status")
+    homework_name = homework.get("homework_name")
+    homework_status = homework.get("status")
 
-    if not None and homework_status not in HOMEWORK_VERDICTS:
-        logging.error(f"Unknown status: {homework_status}")
-        raise KeyError(f"Unknown status: {homework_status}")
+    if homework_name is None:
+        raise KeyError("Key access error 'homework_name'")
+    elif homework_status is None:
+        raise KeyError("Key access error 'status'")
+
+    if (
+        homework_status is not None
+        and homework_status not in HOMEWORK_VERDICTS
+    ):
+        raise KeyError("Unknown status: %s" % homework_status)
     else:
         verdict = HOMEWORK_VERDICTS[homework_status]
 
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
-def send_message(bot, message):
+def send_message(bot: telegram.bot.Bot, message: str) -> str:
     """Sending message to Telegram chat."""
     try:
-        logging.debug(f'Bot Tries to send message: "{message}"')
+        logging.debug('Bot Tries to send message: "%s"' % message)
         bot.send_message(TELEGRAM_CHAT_ID, message)
         logging.debug("The message has been sent")
-    except Exception as error:
-        logging.error(f"Sending message error: {error}")
-        raise Exception(f"Sending message error: {error}")
+    except telegram.error.TelegramError:
+        logging.error("Mistake to send message")
+        raise TelegramError(message)
+    else:
+        logging.info("Sending message: %s" % message)
 
 
-def main():
+def main() -> str:
     """Main bot's working logic."""
     if check_tokens():
         logging.info("All tokens are available.")
@@ -136,25 +123,30 @@ def main():
         sys.exit()
     last_status = ""
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    timestamp = int(time.time()) - RETRY_PERIOD
+    timestamp = int(time.time())
     while True:
         try:
             result = get_api_answer(timestamp)
-            if check_response(result)[FIRST_OBJECT]:
-                if len(check_response(result)[FIRST_OBJECT]) > 0:
-                    homework = check_response(result)[FIRST_OBJECT]
-                    current_status = homework.get("status")
-                    if current_status != last_status:
-                        message = parse_status(homework)
-                        send_message(bot, message)
-                        last_status = message
+            homework = check_response(result)
+            if len(homework) == 0:
+                message = "К сожалению, обновлений нет."
+                current_status = "no updates"
+            else:
+                current_status = homework[FIRST_OBJECT].get("status")
+                message = parse_status(homework[FIRST_OBJECT])
+                print(message)
+            if current_status != last_status:
+                send_message(bot, message)
+                last_status = message
             else:
                 logging.debug("No updates.")
         except Exception as error:
             message = f"Program malfunction: {error}."
             logging.error(message)
-        timestamp = int(time.time())
-        time.sleep(RETRY_PERIOD)
+            send_message(bot, message)
+        finally:
+            timestamp = result.get("current_date")
+            time.sleep(RETRY_PERIOD)
 
 
 if __name__ == "__main__":
