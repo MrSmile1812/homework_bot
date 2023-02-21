@@ -1,4 +1,4 @@
-class TelegramError(Exception):
+class telegram_bot_error(Exception):
     def __init__(self, value):
         self.value = value
 

@@ -8,7 +8,7 @@ import requests
 import telegram
 from dotenv import load_dotenv
 
-from OwnExceptions import TelegramError
+from OwnExceptions import telegram_bot_error
 
 load_dotenv()
 
@@ -38,23 +38,24 @@ HOMEWORK_VERDICTS = {
 
 def check_tokens() -> bool:
     """Checking the availability of all tokens."""
-    if all((PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID)):
-        return True
-    else:
+    if not all((PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID)):
         logging.critical(
             "Necessary variables are missing."
             "Check all variables in list_of_tokens."
         )
-        return False
+    return all((PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID))
 
 
 def get_api_answer(timestamp: int) -> dict:
     """Request to the API service endpoint."""
     try:
-        logging.info("Starting API request with ENDPOINT, headers and params.")
         PAYLOAD = {"from_date": timestamp}
         homework_statuses = requests.get(
             ENDPOINT, headers=HEADERS, params=PAYLOAD
+        )
+        logging.info(
+            "Starting API request with %s, %s and %s."
+            % (ENDPOINT, HEADERS, PAYLOAD)
         )
         if homework_statuses.status_code != HTTPStatus.OK:
             raise requests.RequestException(
@@ -110,7 +111,7 @@ def send_message(bot: telegram.bot.Bot, message: str) -> str:
         logging.debug("The message has been sent")
     except telegram.error.TelegramError:
         logging.error("Mistake to send message")
-        raise TelegramError(message)
+        raise telegram_bot_error(message)
     else:
         logging.info("Sending message: %s" % message)
 
@@ -130,7 +131,7 @@ def main() -> str:
             homework = check_response(result)
             if len(homework) == 0:
                 message = "К сожалению, обновлений нет."
-                current_status = "no updates"
+                current_status = "No updates."
             else:
                 current_status = homework[FIRST_OBJECT].get("status")
                 message = parse_status(homework[FIRST_OBJECT])
