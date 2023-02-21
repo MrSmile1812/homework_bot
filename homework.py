@@ -8,7 +8,7 @@ import requests
 import telegram
 from dotenv import load_dotenv
 
-from OwnExceptions import telegram_bot_error
+from own_exceptions import TelegramBotError
 
 load_dotenv()
 
@@ -111,7 +111,7 @@ def send_message(bot: telegram.bot.Bot, message: str) -> str:
         logging.debug("The message has been sent")
     except telegram.error.TelegramError:
         logging.error("Mistake to send message")
-        raise telegram_bot_error(message)
+        raise TelegramBotError(message)
     else:
         logging.info("Sending message: %s" % message)
 
